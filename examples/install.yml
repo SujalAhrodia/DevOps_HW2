@@ -1,6 +1,6 @@
 ---
 - hosts: web
-
+  become: yes
   vars:
     - root_db_password: 123
     - mmuser_password: "123"
@@ -9,17 +9,17 @@
   gather_facts: true
 
   tasks:
-      
+       
     - name: Set MySQL root password before installing
-      become: yes
+      # become: yes
       debconf: name='mysql-server' question='mysql-server/root_password' value='{{root_db_password | quote}}' vtype='password'
 
     - name: Confirm MySQL root password before installing
-      become: yes
+      # become: yes
       debconf: name='mysql-server' question='mysql-server/root_password_again' value='{{root_db_password | quote}}' vtype='password'
 
     - name: Install packages | pip | mysqldb | mysql-server
-      become: yes
+      # become: yes
       apt: name={{ item }} state=latest
       with_items:
         - python-pip
@@ -33,7 +33,8 @@
     - name: copy .my.cnf file with root credentials
       template: src=templates/.my.cnf dest={{ ansible_env.HOME}}/.my.cnf owner=root mode=0644
     
-    - mysql_user:
+    - name: Creating mysql user
+      mysql_user:
         name: mm_user 
         password: '{{ mmuser_password }}'
         priv: 'mattermost_db.*:ALL'
@@ -43,3 +44,40 @@
       mysql_db:
         name: mattermost_db
         state: present
+    
+    - name: Download mattermost
+      # become: yes
+      get_url:
+        url: https://releases.mattermost.com/5.7.1/mattermost-5.7.1-linux-amd64.tar.gz
+        dest: /opt
+        mode: 0440
+  
+    - name: Extract
+      # become: yes 
+      unarchive:
+        src: /opt/mattermost-5.7.1-linux-amd64.tar.gz
+        dest: /opt
+        remote_src: yes
+    
+    - name: Creating directory 
+      file:
+        path: /opt/mattermost/data
+        state: directory
+
+    - name: Create user group
+      group:
+        name: mattermost
+        state: present
+        
+    - name: Create system user and user groups
+      user:
+        name: mattermost
+        system: yes
+        group: mattermost 
+
+    - name: Setup permissions for user and groups  
+      file: 
+        path: /opt/mattermost
+        owner: mattermost
+        group: mattermost
+        mode: 0644
