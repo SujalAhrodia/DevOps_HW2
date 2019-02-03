@@ -3,6 +3,9 @@
 
   vars:
     - root_db_password: 123
+    - mmuser_password: "123"
+    - mm_user: "mmuser"  
+    - mattermost_db: "mattermost"
   gather_facts: true
 
   tasks:
@@ -29,3 +32,14 @@
 
     - name: copy .my.cnf file with root credentials
       template: src=templates/.my.cnf dest={{ ansible_env.HOME}}/.my.cnf owner=root mode=0644
+    
+    - mysql_user:
+        name: mm_user 
+        password: '{{ mmuser_password }}'
+        priv: 'mattermost_db.*:ALL'
+        state: present
+    
+    - name: Create a new database
+      mysql_db:
+        name: mattermost_db
+        state: present
