@@ -1,0 +1,31 @@
+---
+- hosts: web
+
+  vars:
+    - root_db_password: 123
+  gather_facts: true
+
+  tasks:
+      
+    - name: Set MySQL root password before installing
+      become: yes
+      debconf: name='mysql-server' question='mysql-server/root_password' value='{{root_db_password | quote}}' vtype='password'
+
+    - name: Confirm MySQL root password before installing
+      become: yes
+      debconf: name='mysql-server' question='mysql-server/root_password_again' value='{{root_db_password | quote}}' vtype='password'
+
+    - name: Install packages | pip | mysqldb | mysql-server
+      become: yes
+      apt: name={{ item }} state=latest
+      with_items:
+        - python-pip
+        - python3-pip
+        - python-mysqldb
+        - mysql-server
+    
+    - name: Install the Python MySQLB module
+      pip: name=PyMySql
+
+    - name: copy .my.cnf file with root credentials
+      template: src=templates/.my.cnf dest={{ ansible_env.HOME}}/.my.cnf owner=root mode=0644
