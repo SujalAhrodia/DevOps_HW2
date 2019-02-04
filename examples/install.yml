@@ -91,4 +91,18 @@
         line:  '"DataSource": "mmuser:{{ mmuser_password }}@tcp({{ hostname }}:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",'
         mode: 0744
         backup: yes
+        
+    - name: Mattermost | Create UNIT file
+      template: src=templates/mattermost.service dest=/lib/systemd/system/ mode=0744
 
+    - name: Start Mattermost server
+      systemd:
+        name: mattermost
+        daemon_reload: yes
+        enabled: yes
+        state: started
+    
+    # - name: Stop Mattermost server
+    #   systemd:
+    #     name: mattermost
+    #     state: stopped
