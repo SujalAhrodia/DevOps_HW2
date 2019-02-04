@@ -4,8 +4,9 @@
   vars:
     - root_db_password: 123
     - mmuser_password: "123"
-    - mm_user: "mmuser"  
+    - mm_user: "mmuser"
     - mattermost_db: "mattermost"
+    - hostname: "localhost"
   gather_facts: true
 
   tasks:
@@ -31,18 +32,18 @@
       pip: name=PyMySql
 
     - name: copy .my.cnf file with root credentials
-      template: src=templates/.my.cnf dest={{ ansible_env.HOME}}/.my.cnf owner=root mode=0644
-    
-    - name: Creating mysql user
-      mysql_user:
-        name: mm_user 
-        password: '{{ mmuser_password }}'
-        priv: 'mattermost_db.*:ALL'
-        state: present
+      template: src=templates/.my.cnf dest={{ ansible_env.HOME}}/.my.cnf owner=root mode=0744
     
     - name: Create a new database
       mysql_db:
-        name: mattermost_db
+        name: mattermost
+        state: present    
+
+    - name: Creating mysql user
+      mysql_user:
+        name: "{{mm_user}}"
+        password: "{{ mmuser_password }}"
+        priv: '{{ mattermost_db }}.*:ALL'
         state: present
     
     - name: Download mattermost
@@ -50,7 +51,7 @@
       get_url:
         url: https://releases.mattermost.com/5.7.1/mattermost-5.7.1-linux-amd64.tar.gz
         dest: /opt
-        mode: 0440
+        mode: 0744
   
     - name: Extract
       # become: yes 
@@ -64,12 +65,12 @@
         path: /opt/mattermost/data
         state: directory
 
-    - name: Create user group
+    - name: Create user group named Mattermost
       group:
         name: mattermost
         state: present
-        
-    - name: Create system user and user groups
+
+    - name: Create system user named Mattermost
       user:
         name: mattermost
         system: yes
@@ -77,7 +78,17 @@
 
     - name: Setup permissions for user and groups  
       file: 
-        path: /opt/mattermost
+        path: /opt/mattermost/
         owner: mattermost
         group: mattermost
-        mode: 0644
+        mode: 0744
+        recurse: yes
+
+    - name: Updating config.json
+      lineinfile:
+        path: /opt/mattermost/config/config.json
+        regexp: '(?:"DataSource": "mmuser:)'
+        line:  '"DataSource": "mmuser:{{ mmuser_password }}@tcp({{ hostname }}:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",'
+        mode: 0744
+        backup: yes
+
