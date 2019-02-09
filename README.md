@@ -19,7 +19,9 @@ Unity Id: ssujal
 
 ---
 
-[Installation guide](https://docs.mattermost.com/install/install-ubuntu-1604.html)
+## [Installation guide](https://docs.mattermost.com/install/install-ubuntu-1604.html)
+
+Follow steps to complete each of the task.
 
 ## Requirements:
 vars.yml: 
@@ -41,6 +43,16 @@ port:
 
 ```
 > Encrypt using ```ansible-vault encrpyt <filename>```
+
+Once the configuration server and web-server are setup, configure the files inside the ansible-srv/ inside the configuration server.
+```
+ansible-playbook install_mysql.yml install_mattermost.yml conf_mm.yml -i inventory --ask-vault-pass
+```
+> Set a new vault password and confirm the same when prompted
+
+
+
+
 
 ### Cloud servers:
 **1. [DigitalOcean](https://www.digitalocean.com/)**
