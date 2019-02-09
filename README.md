@@ -17,6 +17,31 @@ Unity Id: ssujal
 
 :white_check_mark: Configuring Mattermost Server <br>
 
+---
+
+[Installation guide](https://docs.mattermost.com/install/install-ubuntu-1604.html)
+
+## Requirements:
+vars.yml: 
+> Consists of variables like name of db, root password, mattermost user, hostname, teamname, user's firstname
+
+secret.yml:
+> Consists of the username, password, server and port of the email sending service. (encrypted)
+> Fill in your details in the following format.
+```
+---
+username:
+  xxxx
+password:
+  xxxx
+server:
+  xxxx
+port:
+  xxx
+
+```
+> Encrypt using ```ansible-vault encrpyt <filename>```
+
 ### Cloud servers:
 **1. [DigitalOcean](https://www.digitalocean.com/)**
 1. The steps were similar to the ones performed in the workshop, with a personalised key from DigitalOcean.
