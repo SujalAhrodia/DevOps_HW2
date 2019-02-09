@@ -7,6 +7,7 @@
     - mm_user: "mmuser"
     - mattermost_db: "mattermost"
     - hostname: "localhost"
+    - firstname: "John"
   gather_facts: true
 
   tasks:
@@ -19,7 +20,7 @@
       # become: yes
       debconf: name='mysql-server' question='mysql-server/root_password_again' value='{{root_db_password | quote}}' vtype='password'
 
-    - name: Install packages | pip | mysqldb | mysql-server
+    - name: Install packages | pip | mysqldb | mysql-server | jq 
       # become: yes
       apt: name={{ item }} state=latest
       with_items:
@@ -27,6 +28,7 @@
         - python3-pip
         - python-mysqldb
         - mysql-server
+        - jq
     
     - name: Install the Python MySQLB module
       pip: name=PyMySql
@@ -101,8 +103,47 @@
         daemon_reload: yes
         enabled: yes
         state: started
+
+    - name: Include file
+      include_vars: "secret.yml"
+      #no_log: true
+
+    - name: Put encrypted file on remote server
+      copy:
+        content="{{ username }},{{ password }},{{ server }},{{ port }}"
+        dest=/tmp/username.txt
+      #no_log: true
+
+    - name: Create a Mattermost user
+      become_user: mattermost
+      command: /opt/mattermost/bin/mattermost user create --firstname {{ firstname }} --system_admin --email {{ username }}@gmail.com --username {{ username }} --password {{ password }}
+
+    - name: Create a Mattermost team
+      become_user: mattermost
+      shell: /opt/mattermost/bin/mattermost team create --name myfirstteam --display_name "My First Team"
     
-    # - name: Stop Mattermost server
-    #   systemd:
-    #     name: mattermost
-    #     state: stopped
+    - name: Add user to team
+      become_user: mattermost
+      shell: /opt/mattermost/bin/mattermost team add myfirstteam {{ username }}@gmail.com {{ username }}
+  
+    - name: Updating config.json
+      become_user: mattermost
+      lineinfile:
+        dest: /opt/mattermost/config/config.json
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      with_items:
+        - { regexp: '(?:"SiteURL":)', line: '"SiteURL": "http://192.168.33.100:8065",' }
+        - { regexp: '(?:"SendEmailNotifications":)', line: '"SendEmailNotifications": "true",' }
+        - { regexp: '(?:"EnableSMTPAuth":)', line: '"EnableSMTPAuth": "true",' }
+        - { regexp: '(?:"FeedbackName":)', line: '"FeedbackName": "No-reply",' }
+        - { regexp: '(?:"FeedbackEmail":)', line: '"FeedbackEmail": "{{ username }}@gmail.com",' }
+        - { regexp: '(?:"SMTPUsername":)', line: '"SMTPUsername": "{{ username }}@gmail.com",' }
+        - { regexp: '(?:"SMTPPassword":)', line: '"SMTPPassword": "{{ password }}",' }
+        - { regexp: '(?:"SMTPServer":)', line: '"SMTPServer": "{{ server }}",' }
+        - { regexp: '(?:"SMTPPort":)', line: '"SMTPPort": "{{ port }}",' }
+
+    - name: Setting ConnectionSecurity
+      become_user: mattermost
+      shell: jq '.EmailSettings.ConnectionSecurity= "TLS"' /opt/mattermost/config/config.json > /opt/mattermost/config/config.json.temp && mv /opt/mattermost/config/config.json.temp /opt/mattermost/config/config.json
+
