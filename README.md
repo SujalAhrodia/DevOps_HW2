@@ -9,6 +9,8 @@ Name: Sujal\
 Unity Id: ssujal
 
 ## Completed Tasks:
+:white_check_mark: Using ansible, be able to automatically configure a server running mattermost <br>
+
 :white_check_mark: Installing Ubuntu Server 16.04 LTS <br>
 
 :white_check_mark: Installing MySQL Database Server (5.7.x is recommended) <br>
@@ -50,55 +52,120 @@ ansible-playbook install_mysql.yml install_mattermost.yml conf_mm.yml -i invento
 ```
 > Set a new vault password and confirm the same when prompted
 
+## Creating your servers (source: course website by Dr.Parnin)
 
+### The configuration server
 
+Let's create a configuration server. This server will be using a "push-based model", where we will be sending configuration commands to other external servers. It also needs to be configured with ansible.
 
+Create the Virtual Machine.
 
-### Cloud servers:
-**1. [DigitalOcean](https://www.digitalocean.com/)**
-1. The steps were similar to the ones performed in the workshop, with a personalised key from DigitalOcean.
-
-2. Create a ssh key locally and register your public key to DigitalOcean.
-
-3. Provide associated id using the API to your instance:
-```
-curl -X GET -H "Content-Type: application/json" -H "Authorization: Bearer $DOTOKEN" "https://api.digitalocean.com/v2/account/keys"
-```
-4. Log into the virtual machine instance via ssh:
-```
-ssh root@IP adress
-```
----
-**2. [Google Cloud Platform(GCP)](https://cloud.google.com/free/)**
-
-1. [Compute Engine API documentation](https://cloud.google.com/compute/docs/reference/rest/v1/)
-
-2. Enable GCompute Engine API for your project.
-
-3. [Set up authentication key](https://cloud.google.com/docs/authentication/getting-started) and add it to you project.
-
-4. Make a new local directory where you want to configure your gcloud server.
-```
-npm init
-  -enter project details
-  -entry point
-  ...
-  ...
-```
-5. Run the following command before executing your code to install the API.
-```
-npm install @google-cloud/compute
+```bash
+$ cd servers/ansible-srv
+$ cat baker.yml
+$ baker bake
 ```
 
-6. Set configurations for the project.
+You should see baker create the virtual machine.
+
 ```
-gcloud config set project <project_name>
+✔ Running apt-get update on VM
+✔ Preparing ansible
+✔ Installing ansible
 ```
-7. Log into the virtual instance via ssh.
+
+Verify that ansible was installed by running opunit `cd ../..`, then `opunit verify -i opunit_inventory.yml`.
+
+### The web server
+
+Let's create another virtual machine for the web server. 
+
+```bash
+$ cd servers/web-srv
+$ cat baker.yml
+$ baker bake
 ```
-gcloud compute ssh <instance_name>
+
+You should see baker create the virtual machine. Verify `baker ssh` works, then `exit` back to your host machine.
+
+## Creating a connection between your servers
+
+You need a way to automatically connect to your server without having to manually authenicate each connection. We will create a pair of public/private keys for [authentication through ssh](https://www.ssh.com/ssh/public-key-authentication#sec-Asymmetric-Cryptography-Algorithms).
+
+From your host machine, create a new public/private key pair, running the following command, and hitting enter for the default prompts:
+
+    ssh-keygen -t rsa -b 4096 -C "web-srv" -f web-srv
+
+
+After generating the keys, you need to copy them onto the servers. The private key (*secret*, tell know one 🤐), needs to be sent over to the configuration server. The public key (🌐), needs to be sent over to the web-server.
+
+#### Setting up the private key
+
+One nice trick is to use a copy utility to copy a file into your copy/paste buffer:
+
+* Mac: `pbcopy < web-srv`
+* Windows: `clip < web-srv`
+* Linux: [Check out one of these options](https://superuser.com/a/288333/862331).
+
+Let's go to the ansible-srv (`cd servers/ansible-srv`, then `baker ssh`).
+
+Using a file editor, paste and store your private key in a file:
+
+```bash
+ansible-srv $ vim ~/.ssh/web-srv
+# Make sure key is not readable by others.
+ansible-srv $ chmod 600 ~/.ssh/web-srv
+# We're done here, go back to host
+ansible-srv $ exit
 ```
----
+
+#### Setting up the public key
+
+Copy the web-srv.pub file from your host.
+
+Go inside the web-srv.
+
+Using a file editor, add the public key to the list of authorized keys:
+
+```bash
+web-srv $ vim ~/.ssh/authorized_keys`
+web-srv $ exit
+```
+
+Take care not to delete other entries, which may affect your ability to use vagrant/Baker to ssh into the machine. You also do not need to change the permissions of the file.
+
+#### Testing your connection/Errors
+
+Inside the ansible-srv, test your connection between the servers:
+
+    ssh -i ~/.ssh/web-srv vagrant@192.168.33.100
+
+Note: You should also be able to make this same connection from your host machine, since you also have private key, locally.
+
+If you see an error or prompt for a password, you have a problem with your key setup. Double check have pasted in the content in correctly (where you in insert mode in vim before pasting?). 
+
+If you see this warning, you need to remember to perform the `chmod 600` in order to fix the permissions of the private key file:
+
+```
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0664 for '/home/vagrant/.ssh/web-srv' are too open.
+```
+
+## Performing commands over ssh
+
+Once you have established a ssh connection between two servers, you have achieved an important milestone in configuration management.
+
+You can now perform ad-hoc commands and even execute scripts on machines without having to manually log-in.
+
+For example, when you run this command.
+
+    ssh -i ~/.ssh/web-srv vagrant@192.168.33.100 ls /
+
+You can see the directory of the web-srv.
+
+
 **3. ScreenCast**
 ---
 
