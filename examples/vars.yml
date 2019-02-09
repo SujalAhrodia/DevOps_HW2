@@ -1,0 +1,16 @@
+---
+root_db_password: 
+  123
+mattermost_db: 
+  "mattermost"
+mm_user: 
+  "mmuser"
+mmuser_password: 
+  "123"
+hostname: 
+  "localhost"
+firstname: 
+  "John"
+myteamname:
+  "myfirstteam"
+

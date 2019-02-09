@@ -1,0 +1,57 @@
+---
+- hosts: web
+  become: yes
+  gather_facts: true
+
+  tasks:
+    - name: Include file
+      include_vars: "secret.yml"
+      no_log: true
+
+    - name: Put encrypted file on remote server
+      copy:
+        content="{{ username }},{{ password }},{{ server }},{{ port }}"
+        dest=/tmp/username.txt
+      no_log: true
+
+    - name: Checking team name
+      become_user: mattermost
+      command: /opt/mattermost/bin/mattermost team list | grep "{{ myteamname }}" 
+      register: condition
+    
+    - name: Create a Mattermost team
+      become_user: mattermost
+      shell: /opt/mattermost/bin/mattermost team create --name {{ myteamname }} --display_name "My First Team"
+      when: condition.stderr != "{{ myteamname }}"
+
+    - name: Create a Mattermost user
+      become_user: mattermost
+      command: /opt/mattermost/bin/mattermost user create --firstname {{ firstname }} --system_admin --email {{ username }}@gmail.com --username {{ username }} --password {{ password }}
+      when: condition.stderr != "{{ myteamname }}"
+
+    - name: Add user to team
+      become_user: mattermost
+      shell: /opt/mattermost/bin/mattermost team add {{ myteamname }} {{ username }}@gmail.com {{ username }}
+      when: condition.stderr != "{{ myteamname }}"
+
+    - name: Updating config.json
+      become_user: mattermost
+      lineinfile:
+        dest: /opt/mattermost/config/config.json
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      with_items:
+        - { regexp: '(?:"SiteURL":)', line: '"SiteURL": "http://192.168.33.100:8065",' }
+        - { regexp: '(?:"SendEmailNotifications":)', line: '"SendEmailNotifications": "true",' }
+        - { regexp: '(?:"EnableSMTPAuth":)', line: '"EnableSMTPAuth": "true",' }
+        - { regexp: '(?:"FeedbackName":)', line: '"FeedbackName": "No-reply",' }
+        - { regexp: '(?:"FeedbackEmail":)', line: '"FeedbackEmail": "{{ username }}@gmail.com",' }
+        - { regexp: '(?:"SMTPUsername":)', line: '"SMTPUsername": "{{ username }}@gmail.com",' }
+        - { regexp: '(?:"SMTPPassword":)', line: '"SMTPPassword": "{{ password }}",' }
+        - { regexp: '(?:"SMTPServer":)', line: '"SMTPServer": "{{ server }}",' }
+        - { regexp: '(?:"SMTPPort":)', line: '"SMTPPort": "{{ port }}",' }
+
+    - name: Setting ConnectionSecurity
+      become_user: mattermost
+      shell: jq '.EmailSettings.ConnectionSecurity= "TLS"' /opt/mattermost/config/config.json > /opt/mattermost/config/config.json.temp && mv /opt/mattermost/config/config.json.temp /opt/mattermost/config/config.json
+
