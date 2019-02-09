@@ -2,17 +2,16 @@
 - hosts: web
   become: yes
   gather_facts: true
-
+  no_log: true
+  
   tasks:
     - name: Include file
       include_vars: "secret.yml"
-      no_log: true
 
     - name: Put encrypted file on remote server
       copy:
         content="{{ username }},{{ password }},{{ server }},{{ port }}"
         dest=/tmp/username.txt
-      no_log: true
 
     - name: Checking team name
       become_user: mattermost
@@ -54,4 +53,3 @@
     - name: Setting ConnectionSecurity
       become_user: mattermost
       shell: jq '.EmailSettings.ConnectionSecurity= "TLS"' /opt/mattermost/config/config.json > /opt/mattermost/config/config.json.temp && mv /opt/mattermost/config/config.json.temp /opt/mattermost/config/config.json
-
