@@ -169,4 +169,4 @@ You can see the directory of the web-srv.
 **ScreenCast**
 ---
 
-* The link to screencast is [here](https://drive.google.com/open?id=1NVaGuj76ZmbMMl-a2iRbcWeScLnMKrud)
+* The link to screencast is [here](https://drive.google.com/file/d/1JZFx3N4F99R0QbV3elDYTzy87ogddHkX/view?usp=sharing)
