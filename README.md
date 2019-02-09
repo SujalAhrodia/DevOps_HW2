@@ -166,7 +166,7 @@ For example, when you run this command.
 You can see the directory of the web-srv.
 
 
-** ScreenCast**
+**ScreenCast**
 ---
 
 * The link to screencast is [here](https://drive.google.com/open?id=1NVaGuj76ZmbMMl-a2iRbcWeScLnMKrud)
